@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Biologi Interaktif - SMP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        @keyframes floatLeaves {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+        
+        .floating-cell {
+            animation: float 4s ease-in-out infinite;
+            position: absolute;
+            font-size: 1.5rem;
+            opacity: 0.3;
+        }
+        
+        .floating-leaf {
+            animation: floatLeaves 3s ease-out forwards;
+            position: fixed;
+            font-size: 2rem;
+            z-index: 50;
+        }
+        
+        .progress-plant {
+            font-size: 3rem;
+            transition: all 0.5s ease;
+        }
+        
+        .question-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 2px solid #22c55e;
+        }
+        
+        .option-button {
+            transition: all 0.3s ease;
+        }
+        
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+        }
+        
+        .correct {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        
+        .incorrect {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .badge {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 relative overflow-hidden">
+    <!-- Floating Background Cells -->
+    <div id="floatingCells"></div>
+    
+    <div class="container mx-auto px-4 py-8 relative z-10">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-green-800 mb-2">🔬 Kuis Biologi Interaktif 🧬</h1>
+            <p class="text-lg text-green-600">Jelajahi dunia biologi dengan menyenangkan!</p>
+        </div>
+        
+        <!-- Progress Section -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 border-2 border-green-200">
+            <div class="flex items-center justify-between mb-4">
+                <div class="text-center">
+                    <div class="progress-plant" id="progressPlant">🌱</div>
+                    <p class="text-sm text-green-600 font-medium">Kemajuan Belajar</p>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-green-800" id="score">0</div>
+                    <p class="text-sm text-green-600">Skor</p>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-blue-800" id="questionCounter">1/15</div>
+                    <p class="text-sm text-blue-600">Pertanyaan</p>
+                </div>
+            </div>
+            <div class="w-full bg-green-100 rounded-full h-3">
+                <div class="bg-gradient-to-r from-green-400 to-green-600 h-3 rounded-full transition-all duration-500" id="progressBar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <!-- Level Selection -->
+        <div id="levelSelection" class="bg-white rounded-xl shadow-lg p-8 mb-8 border-2 border-blue-200">
+            <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">🎯 Pilih Tingkat Kesulitan</h2>
+            <div class="grid md:grid-cols-3 gap-4">
+                <button onclick="startQuiz('mudah')" class="option-button bg-green-100 hover:bg-green-200 p-6 rounded-xl border-2 border-green-300">
+                    <div class="text-3xl mb-2">🌱</div>
+                    <h3 class="font-bold text-green-800">Mudah</h3>
+                    <p class="text-sm text-green-600">Konsep dasar biologi</p>
+                </button>
+                <button onclick="startQuiz('sedang')" class="option-button bg-blue-100 hover:bg-blue-200 p-6 rounded-xl border-2 border-blue-300">
+                    <div class="text-3xl mb-2">🌿</div>
+                    <h3 class="font-bold text-blue-800">Sedang</h3>
+                    <p class="text-sm text-blue-600">Struktur dan fungsi</p>
+                </button>
+                <button onclick="startQuiz('sulit')" class="option-button bg-purple-100 hover:bg-purple-200 p-6 rounded-xl border-2 border-purple-300">
+                    <div class="text-3xl mb-2">🌳</div>
+                    <h3 class="font-bold text-purple-800">Sulit</h3>
+                    <p class="text-sm text-purple-600">Konsep lanjutan</p>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Quiz Section -->
+        <div id="quizSection" class="hidden">
+            <div class="question-card rounded-xl shadow-lg p-8 mb-8">
+                <div class="flex items-center mb-4">
+                    <span class="text-2xl mr-3" id="questionEmoji">🦠</span>
+                    <h2 class="text-xl font-bold text-green-800" id="questionTitle">Pertanyaan</h2>
+                </div>
+                <p class="text-lg text-gray-700 mb-6" id="questionText"></p>
+                <div class="grid gap-3" id="optionsContainer"></div>
+            </div>
+            
+            <div class="text-center">
+                <button id="nextButton" onclick="nextQuestion()" class="hidden bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105">
+                    Pertanyaan Selanjutnya →
+                </button>
+            </div>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden bg-white rounded-xl shadow-lg p-8 text-center border-2 border-green-200">
+            <div class="badge text-white px-6 py-3 rounded-xl inline-block mb-6">
+                <span class="text-2xl">🔬🧪🧬</span>
+                <div class="font-bold text-lg">Ahli Biologi Junior</div>
+            </div>
+            <h2 class="text-3xl font-bold text-green-800 mb-4">🎉 Selamat! 🎉</h2>
+            <p class="text-xl text-gray-700 mb-4">Skor Akhir: <span id="finalScore" class="font-bold text-green-600"></span></p>
+            <p class="text-lg text-gray-600 mb-6" id="resultMessage"></p>
+            <button onclick="restartQuiz()" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-8 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105">
+                🔄 Coba Lagi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentLevel = '';
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let questions = [];
+        let answered = false;
+        
+        const questionSets = {
+            mudah: [
+                {
+                    emoji: "🦠",
+                    question: "Apa bagian terkecil dari makhluk hidup?",
+                    options: ["Sel", "Jaringan", "Organ", "Sistem organ"],
+                    correct: 0
+                },
+                {
+                    emoji: "🌱",
+                    question: "Proses pembuatan makanan pada tumbuhan disebut?",
+                    options: ["Respirasi", "Fotosintesis", "Transpirasi", "Fermentasi"],
+                    correct: 1
+                },
+                {
+                    emoji: "🧬",
+                    question: "DNA adalah singkatan dari?",
+                    options: ["Deoxyribonucleic Acid", "Deoxyribose Acid", "Deoxy Acid", "Ribonucleic Acid"],
+                    correct: 0
+                },
+                {
+                    emoji: "🦠",
+                    question: "Organel yang berfungsi sebagai 'dapur' sel adalah?",
+                    options: ["Nukleus", "Mitokondria", "Ribosom", "Kloroplas"],
+                    correct: 1
+                },
+                {
+                    emoji: "🌱",
+                    question: "Hewan yang memakan tumbuhan disebut?",
+                    options: ["Karnivora", "Herbivora", "Omnivora", "Insektivora"],
+                    correct: 1
+                }
+            ],
+            sedang: [
+                {
+                    emoji: "🦠",
+                    question: "Organel yang mengandung klorofil adalah?",
+                    options: ["Mitokondria", "Ribosom", "Kloroplas", "Vakuola"],
+                    correct: 2
+                },
+                {
+                    emoji: "🌱",
+                    question: "Hasil fotosintesis adalah?",
+                    options: ["CO2 dan H2O", "Glukosa dan O2", "CO2 dan O2", "H2O dan O2"],
+                    correct: 1
+                },
+                {
+                    emoji: "🧬",
+                    question: "Hewan vertebrata adalah hewan yang memiliki?",
+                    options: ["Tulang belakang", "Cangkang", "Exoskeleton", "Tentakel"],
+                    correct: 0
+                },
+                {
+                    emoji: "🦠",
+                    question: "Membran sel berfungsi untuk?",
+                    options: ["Mengatur keluar masuk zat", "Menyimpan makanan", "Menghasilkan energi", "Mengontrol aktivitas sel"],
+                    correct: 0
+                },
+                {
+                    emoji: "🌱",
+                    question: "Klasifikasi makhluk hidup dari yang terbesar adalah?",
+                    options: ["Kingdom, Filum, Kelas", "Filum, Kingdom, Kelas", "Kelas, Kingdom, Filum", "Kingdom, Kelas, Filum"],
+                    correct: 0
+                }
+            ],
+            sulit: [
+                {
+                    emoji: "🧬",
+                    question: "Proses pembelahan sel yang menghasilkan gamet disebut?",
+                    options: ["Mitosis", "Meiosis", "Amitosis", "Fragmentasi"],
+                    correct: 1
+                },
+                {
+                    emoji: "🦠",
+                    question: "Organel yang berperan dalam sintesis protein adalah?",
+                    options: ["Retikulum endoplasma kasar", "Retikulum endoplasma halus", "Aparatus golgi", "Lisosom"],
+                    correct: 0
+                },
+                {
+                    emoji: "🌱",
+                    question: "Reaksi terang fotosintesis terjadi di?",
+                    options: ["Stroma", "Tilakoid", "Sitoplasma", "Nukleus"],
+                    correct: 1
+                },
+                {
+                    emoji: "🧬",
+                    question: "Hewan yang termasuk filum Arthropoda adalah?",
+                    options: ["Cacing tanah", "Ubur-ubur", "Kupu-kupu", "Siput"],
+                    correct: 2
+                },
+                {
+                    emoji: "🦠",
+                    question: "Enzim yang memecah protein dalam lambung adalah?",
+                    options: ["Amilase", "Lipase", "Pepsin", "Tripsin"],
+                    correct: 2
+                }
+            ]
+        };
+        
+        function createFloatingCells() {
+            const container = document.getElementById('floatingCells');
+            const cells = ['🔬', '🦠', '🧫', '🧬'];
+            
+            for (let i = 0; i < 15; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'floating-cell';
+                cell.textContent = cells[Math.floor(Math.random() * cells.length)];
+                cell.style.left = Math.random() * 100 + '%';
+                cell.style.top = Math.random() * 100 + '%';
+                cell.style.animationDelay = Math.random() * 4 + 's';
+                container.appendChild(cell);
+            }
+        }
+        
+        function startQuiz(level) {
+            currentLevel = level;
+            questions = [...questionSets[level]];
+            currentQuestionIndex = 0;
+            score = 0;
+            answered = false;
+            
+            document.getElementById('levelSelection').classList.add('hidden');
+            document.getElementById('quizSection').classList.remove('hidden');
+            
+            updateProgress();
+            showQuestion();
+        }
+        
+        function showQuestion() {
+            const question = questions[currentQuestionIndex];
+            document.getElementById('questionEmoji').textContent = question.emoji;
+            document.getElementById('questionText').textContent = question.question;
+            document.getElementById('nextButton').classList.add('hidden');
+            
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-button bg-white hover:bg-gray-50 p-4 rounded-lg border-2 border-gray-200 text-left transition-all duration-300';
+                button.textContent = option;
+                button.onclick = () => selectAnswer(index);
+                container.appendChild(button);
+            });
+            
+            answered = false;
+        }
+        
+        function selectAnswer(selectedIndex) {
+            if (answered) return;
+            answered = true;
+            
+            const question = questions[currentQuestionIndex];
+            const buttons = document.querySelectorAll('#optionsContainer button');
+            
+            buttons.forEach((button, index) => {
+                if (index === question.correct) {
+                    button.classList.add('correct');
+                } else if (index === selectedIndex && index !== question.correct) {
+                    button.classList.add('incorrect');
+                }
+                button.disabled = true;
+            });
+            
+            if (selectedIndex === question.correct) {
+                score += 20;
+                updatePlantProgress();
+                createFloatingLeaves();
+            }
+            
+            updateProgress();
+            document.getElementById('nextButton').classList.remove('hidden');
+        }
+        
+        function nextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex >= questions.length) {
+                showResults();
+            } else {
+                showQuestion();
+            }
+        }
+        
+        function updateProgress() {
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('score').textContent = score;
+            document.getElementById('questionCounter').textContent = `${currentQuestionIndex + 1}/${questions.length}`;
+        }
+        
+        function updatePlantProgress() {
+            const plantStages = ['🌱', '🌿', '🌳'];
+            const correctAnswers = score / 20;
+            const stageIndex = Math.min(Math.floor(correctAnswers / 2), 2);
+            document.getElementById('progressPlant').textContent = plantStages[stageIndex];
+        }
+        
+        function createFloatingLeaves() {
+            for (let i = 0; i < 5; i++) {
+                setTimeout(() => {
+                    const leaf = document.createElement('div');
+                    leaf.className = 'floating-leaf';
+                    leaf.textContent = '🍃';
+                    leaf.style.left = Math.random() * 100 + '%';
+                    document.body.appendChild(leaf);
+                    
+                    setTimeout(() => {
+                        leaf.remove();
+                    }, 3000);
+                }, i * 200);
+            }
+        }
+        
+        function showResults() {
+            document.getElementById('quizSection').classList.add('hidden');
+            document.getElementById('resultsSection').classList.remove('hidden');
+            document.getElementById('finalScore').textContent = score + '/100';
+            
+            let message = '';
+            if (score >= 80) {
+                message = '🌟 Luar biasa! Kamu benar-benar ahli biologi junior!';
+            } else if (score >= 60) {
+                message = '👍 Bagus! Terus belajar untuk menjadi lebih baik!';
+            } else {
+                message = '💪 Jangan menyerah! Coba lagi dan pelajari lebih dalam!';
+            }
+            
+            document.getElementById('resultMessage').textContent = message;
+            
+            // Create celebration leaves
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => createFloatingLeaves(), i * 300);
+            }
+        }
+        
+        function restartQuiz() {
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('levelSelection').classList.remove('hidden');
+            document.getElementById('progressPlant').textContent = '🌱';
+            document.getElementById('progressBar').style.width = '0%';
+        }
+        
+        // Initialize
+        createFloatingCells();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97c57d47d5c1410c',t:'MTc1NzQwODM2NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+      </html>
